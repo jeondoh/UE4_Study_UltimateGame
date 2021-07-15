@@ -22,6 +22,13 @@ AFloaterActor::AFloaterActor()
 
 	InitialForce = FVector(2000000.f, 0.0f, 0.0f);
 	InitialTorque = FVector(2000000.f, 0.0f, 0.0f);
+
+	RunningTime = 0.f;
+
+	A = 0.f;
+	B = 0.f;
+	C = 0.f;
+	D = 0.f;
 }
 
 // Called when the game starts or when spawned
@@ -29,15 +36,22 @@ void AFloaterActor::BeginPlay()
 {
 	Super::BeginPlay();
 
+	float InitialX = FMath::FRandRange(-500, 500);
+	float InitialY = FMath::FRandRange(-500, 500);
+	float InitialZ = FMath::FRandRange(0, 500);
+
+	InitLocation.X = InitialX;
+	InitLocation.Y = InitialY;
+	InitLocation.Z = InitialZ;
+
 	PlaceLocation = GetActorLocation();
 
 	if(bInitializerFloaterLocations)
 	{
 		SetActorLocation(InitLocation);		
 	}
-	
-	StaticMesh->AddForce(InitialForce);
-	StaticMesh->AddTorqueInRadians(InitialTorque);
+
+	BaseZLocation = PlaceLocation.Z;
 }
 
 // Called every frame
@@ -46,13 +60,12 @@ void AFloaterActor::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	if(bShouldFloat)
 	{
-		FHitResult HitResult;
-		AddActorLocalOffset(InitialDirection, true, &HitResult);
+		FVector NewLocation = GetActorLocation();
 
-		FVector HitLocation = HitResult.Location;
+		NewLocation.Z = BaseZLocation + A * FMath::Sin(B * RunningTime - C) + D;
+		
+		SetActorLocation(NewLocation);
+		RunningTime += DeltaTime;
 	}
-	FRotator Rotation = FRotator(0.0f, 0.0f, 1.0f);
-	
-	// AddActorLocalRotation(Rotation);
 }
 
