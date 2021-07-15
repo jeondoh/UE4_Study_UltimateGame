@@ -269,9 +269,5 @@ __pycache__/
 # tools/
 ### VisualStudio Patch ###
 build/
-
-# Template MAPS Ignore
-Content/Elite_FractalDesert/Maps
-Content/Elite_FractalGlacier/Maps
-Content/AncientTreasures/Maps
-Content/InfinityBladeWeapons/Maps
+# Map Build Data
+*_BuiltData.uasset
