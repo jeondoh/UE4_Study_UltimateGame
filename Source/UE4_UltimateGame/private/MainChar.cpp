@@ -3,6 +3,9 @@
 
 #include "MainChar.h"
 
+#include "Components/CapsuleComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+
 // Sets default values
 AMainChar::AMainChar()
 {
@@ -15,6 +18,8 @@ AMainChar::AMainChar()
 	CameraBoom->TargetArmLength = 600.f; // Camera follows at this distance
 	CameraBoom->bUsePawnControlRotation = true; // Rotate arm based on controller
 
+	GetCapsuleComponent()->SetCapsuleSize(48.f, 105.f);
+
 	// Create follow camera
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
@@ -23,7 +28,22 @@ AMainChar::AMainChar()
 	FollowCamera->bUsePawnControlRotation = false;
 	// Set our turn rates for input
 	BaseTurnRate = 65.f;
-	BaseLookUpRate = 65.f; 
+	BaseLookUpRate = 65.f;
+
+	// 회전과 함께 캐릭터를 회전하지 않음
+	bUseControllerRotationYaw = false;
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationRoll = false;
+
+	// Configure charachter movement
+	// 키를 누른 방향대로 움직임
+	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the Direction of input
+	// 방향을 바꿀때 얼마나 회전할지
+	GetCharacterMovement()->RotationRate = FRotator(0.f, 540.f, 0.0f); // at this rotation rate
+	GetCharacterMovement()->JumpZVelocity = 650.f;
+	GetCharacterMovement()->AirControl = 0.2f;
+
+	
 }
 
 // Called when the game starts or when spawned
@@ -44,7 +64,19 @@ void AMainChar::Tick(float DeltaTime)
 void AMainChar::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+	check(PlayerInputComponent);
+	
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
+	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
+	PlayerInputComponent->BindAxis("MoveForward", this, &AMainChar::MoveForward);
+	PlayerInputComponent->BindAxis("MoveRight", this, &AMainChar::MoveRight);
+
+	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
+	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
+
+	PlayerInputComponent->BindAxis("TurnRate", this, &AMainChar::TurnAtRate);
+	PlayerInputComponent->BindAxis("LookUpRate", this, &AMainChar::LookUpRate);
 }
 
 void AMainChar::MoveForward(float Value)
@@ -71,5 +103,15 @@ void AMainChar::MoveRight(float Value)
 		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 		AddMovementInput(Direction, Value);
 	}
+}
+
+void AMainChar::TurnAtRate(float Rate)
+{
+	AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
+}
+
+void AMainChar::LookUpRate(float Rate)
+{
+	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
 
