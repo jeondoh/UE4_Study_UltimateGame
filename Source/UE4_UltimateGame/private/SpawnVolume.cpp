@@ -3,6 +3,8 @@
 
 #include "SpawnVolume.h"
 
+#include "Kismet/KismetMathLibrary.h"
+
 // Sets default values
 ASpawnVolume::ASpawnVolume()
 {
@@ -24,5 +26,15 @@ void ASpawnVolume::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+FVector ASpawnVolume::GetSpawnPoint()
+{
+	FVector Extent = SpawningBox->GetScaledBoxExtent();
+	FVector Origin = SpawningBox->GetComponentLocation();
+	// 원점과 각 축의 길이를 파라미터로 받는다.
+	// 랜덤한 x,y,z값을 각각 만들어내는 것 보다 조금더 쉽게 계산해 낼수 있다.
+	FVector Point = UKismetMathLibrary::RandomPointInBoundingBox(Origin, Extent);
+	return Point;
 }
 
