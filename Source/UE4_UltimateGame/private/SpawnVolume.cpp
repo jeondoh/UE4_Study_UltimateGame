@@ -2,6 +2,7 @@
 
 
 #include "SpawnVolume.h"
+#include "Critter.h"
 
 #include "Kismet/KismetMathLibrary.h"
 
@@ -36,5 +37,19 @@ FVector ASpawnVolume::GetSpawnPoint()
 	// 랜덤한 x,y,z값을 각각 만들어내는 것 보다 조금더 쉽게 계산해 낼수 있다.
 	FVector Point = UKismetMathLibrary::RandomPointInBoundingBox(Origin, Extent);
 	return Point;
+}
+
+void ASpawnVolume::SpawnOurPawn_Implementation(UClass* ToSpawn, const FVector& Location)
+{
+	if(ToSpawn)
+	{
+		UWorld* World = GetWorld();
+		FActorSpawnParameters SpawnParameters;
+		
+		if(World)
+		{
+			ACritter* CritterSpawned = World->SpawnActor<ACritter>(ToSpawn, Location, FRotator(0.f), SpawnParameters);
+		}
+	}
 }
 

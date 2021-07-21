@@ -33,5 +33,12 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="Spawning")
 	FVector GetSpawnPoint();
+
+	// BlueprintNativeEvent
+	// C++에서 몸체 구현 가능, 블루프린트에서도 구현 가능
+	// _Implementation의 키워드가 붙음
+	// 블루프린트에서 구현을 하면 C++에서 구현한게 무시됨
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Spawning")
+	void SpawnOurPawn(UClass* ToSpawn, const FVector& Location);
 	
 };
