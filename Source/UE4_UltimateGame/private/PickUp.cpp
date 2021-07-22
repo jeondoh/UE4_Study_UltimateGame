@@ -3,9 +3,11 @@
 
 #include "PickUp.h"
 
+#include "MainChar.h"
+
 APickUp::APickUp()
 {
-	
+	CoinCount = 1;
 }
 
 void APickUp::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -13,6 +15,16 @@ void APickUp::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* O
 {
 	Super::OnOverlapBegin(OverlappedComponent, OtherActor, OtherComp, OtherBodyIndex, bFromSweep, SweepResult);
 	UE_LOG(LogTemp, Warning, TEXT("APickUp::OnOverlapBegin()"));
+
+	if(OtherActor)
+	{
+		AMainChar* MainPlayer = Cast<AMainChar>(OtherActor);
+		if(MainPlayer)
+		{
+			MainPlayer->IncrementCoins(CoinCount);
+			MainPlayer->PickUpLocations.Add(GetActorLocation());
+		}
+	}
 }
 
 void APickUp::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,

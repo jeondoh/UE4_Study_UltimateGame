@@ -2,10 +2,11 @@
 
 
 #include "Explosive.h"
+#include "MainChar.h"
 
 AExplosive::AExplosive()
 {
-	
+	Damage = 15.f;
 }
 
 void AExplosive::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -13,6 +14,16 @@ void AExplosive::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor
 {
 	Super::OnOverlapBegin(OverlappedComponent, OtherActor, OtherComp, OtherBodyIndex, bFromSweep, SweepResult);
 	UE_LOG(LogTemp, Warning, TEXT("Explosive::OnOverlapBegin()"));
+
+	if(OtherActor)
+	{
+		AMainChar* MainPlayer = Cast<AMainChar>(OtherActor);
+		if(MainPlayer)
+		{
+			MainPlayer->DecrementHealth(Damage);
+		}
+	}
+	
 }
 
 void AExplosive::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
