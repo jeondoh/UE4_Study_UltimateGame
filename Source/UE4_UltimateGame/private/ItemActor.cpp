@@ -60,7 +60,6 @@ void AItemActor::OnOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor
 	{
 		UGameplayStatics::PlaySound2D(GetWorld(), OverlapSound);
 	}
-	Destroy();
 }
 
 void AItemActor::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,

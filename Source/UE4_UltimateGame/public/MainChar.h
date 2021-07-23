@@ -125,6 +125,10 @@ public:
 	// Called via input to look up/down at a given rate
 	void LookUpRate(float Rate);
 
+	bool bLMBDown;
+	void LMBDown();
+	void LMBUp();
+
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const{return CameraBoom;}
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const{return FollowCamera;}
 
@@ -145,4 +149,27 @@ public:
 	void IncrementCoins(int32 Amount);
 
 	void Die();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Anims")
+	bool bAttacking;
+
+	void Attack();
+
+	UFUNCTION(BlueprintCallable)
+	void AttackEnd();
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Anims")
+	UAnimMontage* CombatMontage;
+
+	// -------------------------------------------------------------------- //
+	// Player Weapon
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Items")
+	class AWeapon* EquippedWeapon;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Items")
+	class AItemActor* ActivateOverlappingItem;
+
+	FORCEINLINE AWeapon* GetEquippedWeapon(){return EquippedWeapon;}
+	FORCEINLINE void SetEquippedWeapon(AWeapon* WeaponToSet);
+	FORCEINLINE void SetActiveOverlappingItem(AItemActor* AItemToSet){ActivateOverlappingItem = AItemToSet;}
 };

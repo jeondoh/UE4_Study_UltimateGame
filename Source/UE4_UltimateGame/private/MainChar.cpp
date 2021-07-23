@@ -3,6 +3,7 @@
 
 #include "MainChar.h"
 
+#include "Weapon.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -61,6 +62,8 @@ AMainChar::AMainChar()
 	
 	StaminaDrainRate = 25.f;
 	MinSprintStamina = 50.f;
+
+	bLMBDown = false;
 }
 
 // Called when the game starts or when spawned
@@ -68,8 +71,8 @@ void AMainChar::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UKismetSystemLibrary::DrawDebugSphere(this, GetActorLocation() + FVector(0,0,175.f),
-		25.f, 8, FLinearColor::Green, 10.f, 5.f);
+	// UKismetSystemLibrary::DrawDebugSphere(this, GetActorLocation() + FVector(0,0,175.f),
+	// 	25.f, 8, FLinearColor::Green, 10.f, 5.f);
 	
 }
 
@@ -166,6 +169,9 @@ void AMainChar::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &AMainChar::ShiftKeyDown);
 	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &AMainChar::ShiftKeyUp);
 
+	PlayerInputComponent->BindAction("LMB", IE_Pressed, this, &AMainChar::LMBDown);
+	PlayerInputComponent->BindAction("LMB", IE_Released, this, &AMainChar::LMBUp);
+	
 	PlayerInputComponent->BindAxis("MoveForward", this, &AMainChar::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AMainChar::MoveRight);
 
@@ -174,11 +180,12 @@ void AMainChar::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 	PlayerInputComponent->BindAxis("TurnRate", this, &AMainChar::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AMainChar::LookUpRate);
+	
 }
 
 void AMainChar::MoveForward(float Value)
 {
-	if (Controller != nullptr && Value != 0.0f)
+	if (Controller != nullptr && Value != 0.0f && (!bAttacking))
 	{
 		// find out which way is forward
 		const FRotator Rotation = Controller->GetControlRotation();
@@ -191,7 +198,7 @@ void AMainChar::MoveForward(float Value)
 
 void AMainChar::MoveRight(float Value)
 {
-	if (Controller != nullptr && Value != 0.0f)
+	if (Controller != nullptr && Value != 0.0f && (!bAttacking))
 	{
 		// find out which way is forward
 		const FRotator Rotation = Controller->GetControlRotation();
@@ -210,6 +217,29 @@ void AMainChar::TurnAtRate(float Rate)
 void AMainChar::LookUpRate(float Rate)
 {
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
+}
+
+void AMainChar::LMBDown()
+{
+	bLMBDown = true;
+	if(ActivateOverlappingItem)
+	{
+		AWeapon* Weapon = Cast<AWeapon>(ActivateOverlappingItem);
+		if(Weapon)
+		{
+			Weapon->Equip(this);
+			SetActiveOverlappingItem(nullptr);
+		}
+	}
+	else if (EquippedWeapon)
+	{
+		Attack();
+	}
+}
+
+void AMainChar::LMBUp()
+{
+	bLMBDown = false;
 }
 
 void AMainChar::ShowPickUpLocations()
@@ -263,5 +293,50 @@ void AMainChar::IncrementCoins(int32 Amount)
 void AMainChar::Die()
 {
 	
+}
+
+void AMainChar::Attack()
+{
+	if(!bAttacking)
+	{
+		bAttacking = true;
+		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+		if(AnimInstance && CombatMontage)
+		{
+			int32 Section = FMath::RandRange(0, 1);
+			switch(Section)
+			{
+				case 0:
+					AnimInstance->Montage_Play(CombatMontage, 2.2f);
+					AnimInstance->Montage_JumpToSection(FName("Attack_1"), CombatMontage);
+					break;
+				case 1:
+					AnimInstance->Montage_Play(CombatMontage, 1.8f);
+					AnimInstance->Montage_JumpToSection(FName("Attack_2"), CombatMontage);
+					break;
+				default:
+				;
+			}
+			
+		}	
+	}
+}
+
+void AMainChar::AttackEnd()
+{
+	bAttacking = false;
+	if(bLMBDown)
+	{
+		Attack();
+	}
+}
+
+void AMainChar::SetEquippedWeapon(AWeapon* WeaponToSet)
+{
+	if(EquippedWeapon)
+	{
+		EquippedWeapon->Destroy();
+	}
+	EquippedWeapon = WeaponToSet;
 }
 
