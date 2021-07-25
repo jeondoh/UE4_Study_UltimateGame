@@ -101,7 +101,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Player Stats")
 	int32 Coins;
-	
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -160,6 +160,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Anims")
 	UAnimMontage* CombatMontage;
+
+	UFUNCTION(BlueprintCallable)
+	void PlaySwingSound();
 
 	// -------------------------------------------------------------------- //
 	// Player Weapon

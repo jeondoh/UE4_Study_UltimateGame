@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "ItemActor.h"
 #include "MainChar.h"
+#include "Components/BoxComponent.h"
 
 #include "Weapon.generated.h"
 
@@ -36,6 +37,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item | Sound")
 	USoundCue* OnEquipSound;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item | Sound")
+	USoundCue* SwingSound;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="SkeletalMesh")
 	USkeletalMeshComponent* SkeletalMesh;
 
@@ -45,8 +49,32 @@ public:
 	virtual void OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex) override;
 
+	UFUNCTION()
+	void CombatOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+			UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult);
+
+	UFUNCTION()
+	void CombatOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Item | Combat")
+	UBoxComponent* CombatCollision;
+	
 	void Equip(AMainChar* Player);
 
 	FORCEINLINE void SetWeaponStat(EWeaponStat Stat){WeaponStat = Stat;}
 	FORCEINLINE EWeaponStat GetWeaponStat(){return WeaponStat;}
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item | Combat")
+	float Damage;
+
+	UFUNCTION(BlueprintCallable)
+	void ActivateCollision();
+
+	UFUNCTION(BlueprintCallable)
+	void DeActivateCollision();
+	
+protected:
+	virtual void BeginPlay() override;
+	
 };
