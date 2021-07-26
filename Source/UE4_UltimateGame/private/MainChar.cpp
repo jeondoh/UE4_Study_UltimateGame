@@ -3,10 +3,12 @@
 
 #include "MainChar.h"
 
+#include "Enemy.h"
 #include "Weapon.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 // Sets default values
@@ -65,6 +67,11 @@ AMainChar::AMainChar()
 	MinSprintStamina = 50.f;
 
 	bLMBDown = false;
+
+	InterpSpeed = 15.f;
+	bInterpToEnemy = false;
+
+	bHasCombatTarget = false;
 }
 
 // Called when the game starts or when spawned
@@ -72,15 +79,15 @@ void AMainChar::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// UKismetSystemLibrary::DrawDebugSphere(this, GetActorLocation() + FVector(0,0,175.f),
-	// 	25.f, 8, FLinearColor::Green, 10.f, 5.f);
-	
+	MainPlayerController = Cast<AMainPlayerController>(GetController());	
 }
 
 // Called every frame
 void AMainChar::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if(MovementStatus == EMovementStatus::EMS_Dead) return;
 
 	float DeltaStamina = StaminaDrainRate * DeltaTime;
 	switch (StaminaStatus)
@@ -156,7 +163,38 @@ void AMainChar::Tick(float DeltaTime)
 		default:
 			;
 	}
+
+	if(bInterpToEnemy && CombatTarget)
+	{
+		FRotator LookAtYaw = GetLookAtRotationYaw(CombatTarget->GetActorLocation());
+		// Target 방향으로 스무스하게 바라봄
+		FRotator InterpRotation = FMath::RInterpTo(GetActorRotation(), LookAtYaw, DeltaTime, InterpSpeed);
+		SetActorRotation(InterpRotation);
+	}
+
+	if(CombatTarget)
+	{
+		CombatTargetLocation = CombatTarget->GetActorLocation();
+		if(MainPlayerController)
+		{
+			MainPlayerController->EnemyLocation = CombatTargetLocation;
+		}
+	}
+	
 }
+
+FRotator AMainChar::GetLookAtRotationYaw(FVector Target)
+{
+	FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), Target);
+	FRotator LookAtRotationYaw(0.f, LookAtRotation.Yaw, 0.f);
+	return LookAtRotationYaw;
+}
+
+void AMainChar::SetInterpToEnemy(bool Interp)
+{	
+	bInterpToEnemy = Interp;
+}
+
 
 // Called to bind functionality to input
 void AMainChar::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -164,7 +202,7 @@ void AMainChar::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	check(PlayerInputComponent);
 	
-	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMainChar::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
 	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &AMainChar::ShiftKeyDown);
@@ -186,7 +224,7 @@ void AMainChar::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 void AMainChar::MoveForward(float Value)
 {
-	if (Controller != nullptr && Value != 0.0f && (!bAttacking))
+	if (Controller != nullptr && Value != 0.0f && (!bAttacking) && (MovementStatus!=EMovementStatus::EMS_Dead))
 	{
 		// find out which way is forward
 		const FRotator Rotation = Controller->GetControlRotation();
@@ -199,7 +237,7 @@ void AMainChar::MoveForward(float Value)
 
 void AMainChar::MoveRight(float Value)
 {
-	if (Controller != nullptr && Value != 0.0f && (!bAttacking))
+	if (Controller != nullptr && Value != 0.0f && (!bAttacking) && (MovementStatus!=EMovementStatus::EMS_Dead))
 	{
 		// find out which way is forward
 		const FRotator Rotation = Controller->GetControlRotation();
@@ -220,9 +258,20 @@ void AMainChar::LookUpRate(float Rate)
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
 
+void AMainChar::Jump()
+{
+	if(MovementStatus!= EMovementStatus::EMS_Dead)
+	{
+		Super::Jump();	
+	}
+}
+
 void AMainChar::LMBDown()
 {
 	bLMBDown = true;
+
+	if(MovementStatus == EMovementStatus::EMS_Dead) return;
+	
 	if(ActivateOverlappingItem)
 	{
 		AWeapon* Weapon = Cast<AWeapon>(ActivateOverlappingItem);
@@ -279,11 +328,17 @@ void AMainChar::ShiftKeyUp()
 void AMainChar::DecrementHealth(float Amount)
 {
 	Health -= Amount;
-	if(Health - Amount <= 0.f)
+	if(Health<= 0.f)
 	{
-		
 		Die();
 	}
+}
+
+float AMainChar::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
+	AActor* DamageCauser)
+{
+	DecrementHealth(DamageAmount);
+	return DamageAmount;
 }
 
 void AMainChar::IncrementCoins(int32 Amount)
@@ -293,14 +348,26 @@ void AMainChar::IncrementCoins(int32 Amount)
 
 void AMainChar::Die()
 {
+	if(MovementStatus==EMovementStatus::EMS_Dead) return;
+
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if(AnimInstance && CombatMontage)
+	{
+		AnimInstance->Montage_Play(CombatMontage, 1.0f);
+		AnimInstance->Montage_JumpToSection(FName("Death"));
+	}
+	SetMovementStatus(EMovementStatus::EMS_Dead);
 }
 
 void AMainChar::Attack()
 {
-	if(!bAttacking)
+	if(!bAttacking && MovementStatus != EMovementStatus::EMS_Dead)
 	{
 		bAttacking = true;
+		SetInterpToEnemy(true);
+		
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 		if(AnimInstance && CombatMontage)
 		{
@@ -319,17 +386,13 @@ void AMainChar::Attack()
 				;
 			}
 		}
-		if(EquippedWeapon->SwingSound)
-		{
-			// UGameplayStatics::PlaySound2D(this, EquippedWeapon->SwingSound);
-		}
-		
 	}
 }
 
 void AMainChar::AttackEnd()
 {
 	bAttacking = false;
+	SetInterpToEnemy(false);
 	if(bLMBDown)
 	{
 		Attack();
@@ -342,6 +405,12 @@ void AMainChar::PlaySwingSound()
 	{
 		UGameplayStatics::PlaySound2D(this, EquippedWeapon->SwingSound);
 	}
+}
+
+void AMainChar::DeathEnd()
+{
+	GetMesh()->bPauseAnims = true;
+	GetMesh()->bNoSkeletonUpdate = true;
 }
 
 void AMainChar::SetEquippedWeapon(AWeapon* WeaponToSet)

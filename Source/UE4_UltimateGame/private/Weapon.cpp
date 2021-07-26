@@ -95,6 +95,10 @@ void AWeapon::CombatOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActo
 			{
 				UGameplayStatics::PlaySound2D(this, Enemy->HitSound);
 			}
+			if(DamageTypeClass)
+			{
+				UGameplayStatics::ApplyDamage(Enemy, Damage, WeaponInstigator, this, DamageTypeClass);
+			}
 		}
 	}
 }
@@ -109,6 +113,7 @@ void AWeapon::Equip(AMainChar* Player)
 {
 	if(Player)
 	{
+		SetInstigator(Player->GetController());
 		// 충돌처리
 		SkeletalMesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
 		SkeletalMesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);

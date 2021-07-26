@@ -4,9 +4,12 @@
 
 #include "CoreMinimal.h"
 
+#include "MainPlayerController.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Sound/SoundCue.h"
+
 #include "MainChar.generated.h"
 
 UENUM(BlueprintType)
@@ -14,6 +17,8 @@ enum class EMovementStatus : uint8
 {
 	EMS_Normal UMETA(DisplayName = "Normal"),
 	EMS_Sprinting UMETA(DisplayName = "Sprinting"), 
+	EMS_Dead UMETA(DisplayName = "Dead"),
+	
 	EMS_Max UMETA(DisplayName = "DefaultMAX")
 };
 
@@ -36,8 +41,32 @@ public:
 	// Sets default values for this character's properties
 	AMainChar();
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat")
+	bool bHasCombatTarget;
+
+	FORCEINLINE void SetHasCombatTarget(bool HasTarget){bHasCombatTarget = HasTarget;}
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Combat")
+	FVector CombatTargetLocation;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Controller")
+	AMainPlayerController* MainPlayerController;
+
 	TArray<FVector> PickUpLocations;
 
+	float InterpSpeed;
+
+	bool bInterpToEnemy;
+
+	void SetInterpToEnemy(bool Interp);
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat")
+	class AEnemy* CombatTarget;
+
+	FORCEINLINE void SetCombatTarget(AEnemy* Target) {CombatTarget = Target;}
+
+	FRotator GetLookAtRotationYaw(FVector Target);
+	
 	// -------------------------------------------------------------------- //
 	// Player Movement
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category="Enums")
@@ -102,6 +131,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Player Stats")
 	int32 Coins;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Combat")
+	UParticleSystem* HitParticles;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Combat")
+	USoundCue* HitSound;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -125,6 +160,8 @@ public:
 	// Called via input to look up/down at a given rate
 	void LookUpRate(float Rate);
 
+	virtual void Jump() override;
+
 	bool bLMBDown;
 	void LMBDown();
 	void LMBUp();
@@ -146,6 +183,9 @@ public:
 	// Player Stats
 	void DecrementHealth(float Amount);
 
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const & DamageEvent,
+		class AController * EventInstigator, AActor * DamageCauser) override;
+
 	void IncrementCoins(int32 Amount);
 
 	void Die();
@@ -163,6 +203,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void PlaySwingSound();
+	
+	UFUNCTION(BlueprintCallable)
+	void DeathEnd();
 
 	// -------------------------------------------------------------------- //
 	// Player Weapon
@@ -175,4 +218,5 @@ public:
 	FORCEINLINE AWeapon* GetEquippedWeapon(){return EquippedWeapon;}
 	FORCEINLINE void SetEquippedWeapon(AWeapon* WeaponToSet);
 	FORCEINLINE void SetActiveOverlappingItem(AItemActor* AItemToSet){ActivateOverlappingItem = AItemToSet;}
+
 };
